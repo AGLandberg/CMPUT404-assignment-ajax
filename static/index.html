@@ -32,14 +32,16 @@ var W = canvas.width  = window.innerWidth-6;
 var H = canvas.height = window.innerHeight-50;
 
 
-function sendJSONXMLHTTPRequest(url, objects, callback) {
+function sendJSONXMLHTTPRequest(url, objects, callback, method) {
     var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function () {
         if (xhr.readyState==4) {
             try {
                 if (xhr.status==200) {
                     //XXX: parse some JSON from the request!
+                    data = JSON.parse(xhr.responseText);
                     //XXX: Pass the data to the callback!
+                    callback(data);
                 }
             } 
             catch(e) {
@@ -47,6 +49,18 @@ function sendJSONXMLHTTPRequest(url, objects, callback) {
             }
         }
     };
+
+    xhr.open(method, url, true);
+    xhr.setRequestHeader("Accept", "application/json");
+
+    if (method === "GET") {
+        xhr.send();
+        return;
+    }
+    
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.send(JSON.stringify(objects));
+
     //XXX: POST to a URL
     //XXX: set the mimetype and the accept headers!
     // Remember to use application/json !
@@ -135,9 +149,14 @@ function getPosition(e) {
 
 
 function addEntity(entity, data) {
+
+    if (Object.values(world).includes(entity)) {
+        method = "PUT";
+    } else {
+        method = "POST";
+    }
     world[entity] = data;
-    drawNextFrame(); // (but should we?)
-    //XXX: Send a XHTML Request that updates the entity you just  modified!
+    sendJSONXMLHTTPRequest("/entity/" + entity, data, ()=>{}, method)
 
 }
 
@@ -262,6 +281,26 @@ mouse.mousedraggers.push(function(x,y,clicked,e) {
 
 function update() {
     //XXX: TODO Get the world from the webservice using a XMLHTTPRequest
+    sendJSONXMLHTTPRequest("/world", {}, (data)=>{if (world != data) { world = data; drawNextFrame();}}, "GET")
+    // var xhr = new XMLHttpRequest();
+    // xhr.onreadystatechange = function () {
+    //     if (xhr.readyState == 4) {
+    //         try {
+    //             if (xhr.status == 200) {
+    //                 data = JSON.parse(xhr.responseText);
+    //                 if (world != data) {
+    //                     world = data;
+    //                     drawNextFrame();
+    //                 }
+    //             }
+    //         }
+    //         catch (e) {
+    //             alert('Error: ' + e.name);
+    //         }
+    //     }
+    // }
+    // xhr.open("GET", "/world");
+    // xhr.send();
     drawFrame();
 }
 
